@@ -2,157 +2,89 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Custom AI Translator</title>
+    <title>Custom Translator Widget</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
             margin: 0; 
             padding: 10px; 
             background: transparent; 
+            text-align: center;
         }
         .translator-container { 
             max-width: 100%; 
             display: flex; 
             flex-direction: column; 
-            gap: 12px; 
+            align-items: center;
+            gap: 15px;
         }
-        .controls { 
-            display: flex; 
-            gap: 10px; 
-            align-items: center; 
-            justify-content: center; 
+        /* Центрируем панель управления */
+        #google_translate_element {
+            margin: 10px 0;
+            padding: 5px;
+            background: #ffffff;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            display: inline-block;
         }
-        .translator-box { 
-            display: flex; 
-            gap: 15px; 
-            width: 100%; 
-        }
+        /* Стилизуем профессиональное поле для ввода текста */
         textarea { 
-            width: 50%; 
+            width: 100%; 
             height: 180px; 
             padding: 15px; 
             border: 1px solid #dadce0; 
-            border-radius: 10px; 
+            border-radius: 12px; 
             font-size: 16px; 
             outline: none; 
+            box-sizing: border-box;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
             resize: none;
-            box-sizing: border-box; 
             font-family: inherit;
         }
         textarea:focus { 
             border-color: #1a73e8; 
-            box-shadow: 0 0 0 2px rgba(26,115,232,0.2);
         }
-        textarea[readonly] { 
-            background-color: #f8f9fa; 
-            color: #3c4043; 
+        .info-text {
+            font-size: 12px;
+            color: #70757a;
+            margin-top: 5px;
         }
-        select { 
-            padding: 10px 16px; 
-            border: 1px solid #dadce0; 
-            border-radius: 8px; 
-            font-size: 14px; 
-            background: white; 
-            cursor: pointer; 
-            outline: none; 
+        /* Аккуратно скрываем лишние элементы гугловского тулбара */
+        .goog-te-banner-frame.skiptranslate, .goog-te-gadget-icon {
+            display: none !important;
         }
-        button { 
-            padding: 10px 24px; 
-            background: #1a73e8; 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            font-size: 14px; 
-            font-weight: 500; 
-            cursor: pointer; 
-            transition: background 0.2s; 
-        }
-        button:hover { 
-            background: #1557b0; 
-        }
-        @media (max-width: 600px) { 
-            .translator-box { flex-direction: column; } 
-            textarea { width: 100%; height: 130px; } 
+        body {
+            top: 0px !important;
         }
     </style>
 </head>
 <body>
 
 <div class="translator-container">
-    <div class="controls">
-        <select id="langFrom">
-            <option value="ru" selected>Русский</option>
-            <option value="en">Английский</option>
-        </select>
-        
-        <button id="translateBtn">Перевести ⇄</button>
-        
-        <select id="langTo">
-            <option value="en" selected>Английский</option>
-            <option value="ru">Русский</option>
-        </select>
-    </div>
+    <!-- Сюда автоматически встроится аккуратный выбор языков от Google -->
+    <div id="google_translate_element"></div>
 
-    <div class="translator-box">
-        <textarea id="inputText" placeholder="Введите сложный текст (например: Здравствуйте! Как у вас жизнь?)..."></textarea>
-        <textarea id="outputText" placeholder="Здесь появится готовый перевод" readonly></textarea>
-    </div>
+    <!-- Поле, в которое пользователь вводит фразу. Она переведется прямо внутри него на лету -->
+    <textarea id="inputText" placeholder="Введите любой сложный текст (фразы, абзацы). Выберите нужный язык в меню выше, и этот текст мгновенно и полностью переведется..."></textarea>
+    
+    <div class="info-text">Система машинного перевода интегрирована в интерфейс вашего бренда</div>
 </div>
 
-<script>
-    document.getElementById('translateBtn').addEventListener('click', function() {
-        const text = document.getElementById('inputText').value.trim();
-        const fromLang = document.getElementById('langFrom').value;
-        const toLang = document.getElementById('langTo').value;
-        const outputField = document.getElementById('outputText');
-
-        if (!text) {
-            outputField.value = "Пожалуйста, введите текст.";
-            return;
-        }
-
-        outputField.value = "Перевод...";
-
-        // 1. Создаем абсолютно уникальное глобальное имя для колбэка
-        const callbackName = 'mymemory_cb_' + Math.round(100000 * Math.random());
-        
-        // 2. Регистрируем функцию обработки ответа в глобальном окне
-        window[callbackName] = function(response) {
-            try {
-                if (response && response.responseData && response.responseData.translatedText) {
-                    // Декодируем HTML-сущности, если API вернул их (например, &quot; вместо кавычек)
-                    const txt = document.createElement('textarea');
-                    txt.innerHTML = response.responseData.translatedText;
-                    outputField.value = txt.value;
-                } else {
-                    outputField.value = "Ошибка: Сервер вернул пустой или некорректный ответ.";
-                }
-            } catch (e) {
-                outputField.value = "Ошибка обработки данных.";
-            }
-            
-            // Чистим за собой DOM и память
-            if (script && script.parentNode) {
-                script.parentNode.removeChild(script);
-            }
-            delete window[callbackName];
-        };
-
-        // 3. Формируем динамический тег скрипта. 
-        // MyMemory API идеально принимает параметр &callback= и отдает валидный JSONP, который пробивает Sandbox в Wix.
-        const script = document.createElement('script');
-        script.src = `https://translated.net{encodeURIComponent(text)}&langpair=${fromLang}|${toLang}&callback=${callbackName}`;
-        
-        script.onerror = function() {
-            outputField.value = "Ошибка соединения. Пожалуйста, попробуйте еще раз.";
-            try { document.body.removeChild(script); } catch(e){}
-            delete window[callbackName];
-        };
-        
-        // Добавляем скрипт на страницу для выполнения запроса
-        document.body.appendChild(script);
-    });
+<!-- Вызываем рабочий корпоративный модуль Google, адаптированный под фреймы -->
+<script type="text/javascript">
+function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+        pageLanguage: 'auto', 
+        // Вы можете добавить сюда любые нужные языки через запятую
+        includedLanguages: 'ru,en,de,es,fr,zh-CN', 
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        multilanguagePage: true
+    }, 'google_translate_element');
+}
 </script>
+
+<script type="text/javascript" src="https://google.com"></script>
 
 </body>
 </html>
+
