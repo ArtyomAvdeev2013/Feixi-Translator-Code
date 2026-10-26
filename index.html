@@ -2,76 +2,28 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Мой Брендированный Переводчик</title>
+    <title>Автономный ИИ Переводчик</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
-            margin: 0; 
-            padding: 10px; 
-            background: transparent; 
+            margin: 0; padding: 10px; background: transparent; 
         }
-        .translator-container { 
-            max-width: 100%; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 12px; 
-        }
-        .controls { 
-            display: flex; 
-            gap: 10px; 
-            align-items: center; 
-            justify-content: center; 
-        }
-        .translator-box { 
-            display: flex; 
-            gap: 15px; 
-            width: 100%; 
-        }
-        .field-group {
-            width: 50%;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
+        .translator-container { max-width: 100%; display: flex; flex-direction: column; gap: 12px; }
+        .controls { display: flex; gap: 10px; align-items: center; justify-content: center; }
+        .translator-box { display: flex; gap: 15px; width: 100%; }
         textarea { 
-            width: 100%; 
-            height: 180px; 
-            padding: 15px; 
-            border: 1px solid #dadce0; 
-            border-radius: 10px; 
-            font-size: 16px; 
-            outline: none; 
-            resize: none;
-            box-sizing: border-box; 
-            font-family: inherit;
+            width: 50%; height: 180px; padding: 15px; border: 1px solid #dadce0; 
+            border-radius: 10px; font-size: 16px; outline: none; resize: none;
+            box-sizing: border-box; font-family: inherit;
         }
-        textarea:focus { 
-            border-color: #1a73e8; 
-            box-shadow: 0 0 0 2px rgba(26,115,232,0.2);
-        }
-        .output-text-box { 
-            background-color: #f8f9fa; 
-            color: #3c4043; 
-            border: 1px solid #dadce0; 
-            border-radius: 10px; 
-            padding: 15px;
-            font-size: 16px;
-            height: 180px;
-            box-sizing: border-box;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
+        textarea:focus { border-color: #1a73e8; box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
+        textarea[readonly] { background-color: #f8f9fa; color: #3c4043; }
         button { 
-            padding: 10px 24px; 
-            background: #1a73e8; color: white; border: none; border-radius: 8px; 
+            padding: 10px 24px; background: #1a73e8; color: white; border: none; border-radius: 8px; 
             font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s; 
         }
         button:hover { background: #1557b0; }
-        
-        /* Секретный трюк: заставляем правый блок принудительно считаться английским для систем перевода */
-        .en-target-zone {
-            content-visibility: auto;
-        }
+        .status { font-size: 12px; color: #70757a; text-align: center; margin-top: -5px; }
     </style>
 </head>
 <body>
@@ -80,37 +32,63 @@
     <div class="controls">
         <span>Русский</span>
         <button id="translateBtn">Перевести ⇄</button>
-        <span>Английский (перевод кликом мыши)</span>
+        <span>Английский</span>
     </div>
 
     <div class="translator-box">
-        <div class="field-group">
-            <textarea id="inputText" placeholder="Введите любой текст (сложные фразы, абзацы)..."></textarea>
-        </div>
-        <div class="field-group">
-            <!-- Блок перевода, обернутый в специальный тег, который браузер предлагает перевести -->
-            <div id="outputText" class="output-text-box en-target-zone" lang="en">Здесь появится готовый перевод</div>
-        </div>
+        <textarea id="inputText" placeholder="Введите сложный текст..."></textarea>
+        <textarea id="outputText" placeholder="Здесь появится автоматический перевод" readonly></textarea>
     </div>
+    <div id="statusText" class="status">Статус: Готов к работе</div>
 </div>
 
-<script>
-    document.getElementById('translateBtn').addEventListener('click', function() {
-        const text = document.getElementById('inputText').value.trim();
-        const outputField = document.getElementById('outputText');
+<!-- Подключаем современную ИИ-библиотеку прямо из независимого CDN -->
+<script type="module">
+    import { pipeline } from 'https://jsdelivr.net';
 
+    let translator = null;
+    const btn = document.getElementById('translateBtn');
+    const status = document.getElementById('statusText');
+    const inputField = document.getElementById('inputText');
+    const outputField = document.getElementById('outputText');
+
+    btn.addEventListener('click', async () => {
+        const text = inputField.value.trim();
         if (!text) {
-            outputField.textContent = "Пожалуйста, введите текст.";
-            outputField.style.color = "#3c4043";
+            outputField.value = "Пожалуйста, введите текст.";
             return;
         }
 
-        // Переносим текст в правое окно
-        outputField.textContent = text;
-        outputField.style.color = "#000";
+        // Если нейросеть еще не загружена в браузер, загружаем её
+        if (!translator) {
+            status.textContent = "Загрузка ИИ-модели в ваш браузер (только при первом запуске, около 15-20 МБ)...";
+            btn.disabled = true;
+            try {
+                // Используем сверхлегкую и быструю модель Xenova/translate5-ru-en
+                translator = await pipeline('translation', 'Xenova/mararian-translate-ru-en');
+                status.textContent = "ИИ успешно загружен в браузер!";
+            } catch (err) {
+                status.textContent = "Ошибка загрузки локальной модели. Проверьте интернет.";
+                btn.disabled = false;
+                return;
+            }
+            btn.disabled = false;
+        }
 
-        // Инструкция для пользователя, так как перевод делает сам браузер
-        alert("Текст скопирован в окно перевода! Теперь просто нажмите правой кнопкой мыши по правому серому окошку и выберите «Перевести на английский» (или используйте всплывающую панель переводчика вашего браузера вверху экрана).");
+        outputField.value = "ИИ вычисляет перевод...";
+        
+        try {
+            // Локальный перевод силами процессора пользователя
+            const output = await translator(text, {
+                src_lang: 'rus_Cyrl',
+                tgt_lang: 'eng_Latn',
+            });
+            
+            outputField.value = output[0].translation_text;
+            status.textContent = "Перевод завершен локально!";
+        } catch (error) {
+            outputField.value = "Ошибка локального перевода: " + error.message;
+        }
     });
 </script>
 
