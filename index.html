@@ -2,9 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Мой Брендированный Переводчик</title>
-    <!-- Подключаем официальную библиотеку ИИ-сервисов Puter, которая разрешена в фреймах -->
-    <script src="https://puter.com"></script>
+    <title>Брендированный ИИ Переводчик</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
@@ -83,30 +81,28 @@
 <div class="translator-container">
     <div class="controls">
         <select id="langFrom">
-            <option value="Russian" selected>Русский</option>
-            <option value="English">Английский</option>
-            <option value="German">Немецкий</option>
-            <option value="Spanish">Испанский</option>
+            <option value="ru" selected>Русский</option>
+            <option value="en">Английский</option>
+            <option value="de">Немецкий</option>
         </select>
         
         <button id="translateBtn">Перевести ⇄</button>
         
         <select id="langTo">
-            <option value="English" selected>Английский</option>
-            <option value="Russian">Русский</option>
-            <option value="German">Немецкий</option>
-            <option value="Spanish">Испанский</option>
+            <option value="en" selected>Английский</option>
+            <option value="ru">Русский</option>
+            <option value="de">Немецкий</option>
         </select>
     </div>
 
     <div class="translator-box">
-        <textarea id="inputText" placeholder="Введите любой сложный текст для перевода..."></textarea>
-        <textarea id="outputText" placeholder="Здесь появится автоматический перевод" readonly></textarea>
+        <textarea id="inputText" placeholder="Введите любой сложный текст..."></textarea>
+        <textarea id="outputText" placeholder="Здесь появится готовый перевод" readonly></textarea>
     </div>
 </div>
 
 <script>
-    document.getElementById('translateBtn').addEventListener('click', async () => {
+    document.getElementById('translateBtn').addEventListener('click', function() {
         const text = document.getElementById('inputText').value.trim();
         const fromLang = document.getElementById('langFrom').value;
         const toLang = document.getElementById('langTo').value;
@@ -117,22 +113,44 @@
             return;
         }
 
-        outputField.value = "ИИ вычисляет перевод...";
+        outputField.value = "Автоматический перевод...";
 
-        try {
-            // Прямой вызов встроенной бесплатной нейросети Putер ИИ, адаптированной под фреймы
-            const response = await puter.ai.chat(
-                `Translate the following text from ${fromLang} to ${toLang}. Return ONLY the direct translation without any extra comments, explanations or markdown quotes: "${text}"`
-            );
-
-            if (response && response.message && response.message.content) {
-                outputField.value = response.message.content.trim();
-            } else {
-                outputField.value = "Ошибка: ИИ вернул пустой ответ.";
+        // Генерируем уникальное имя для callback функции (JSONP подход)
+        const callbackName = 'google_jsonp_cb_' + Math.round(100000 * Math.random());
+        
+        window[callbackName] = function(data) {
+            try {
+                if (data && data[0]) {
+                    let translatedText = '';
+                    // Собираем перевод по частям (актуально для длинных текстов)
+                    data[0].forEach(function(step) {
+                        if (step && step[0]) {
+                            translatedText += step[0];
+                        }
+                    });
+                    outputField.value = translatedText;
+                } else {
+                    outputField.value = "Ошибка: Не удалось извлечь перевод.";
+                }
+            } catch (e) {
+                outputField.value = "Ошибка обработки ответа ИИ.";
             }
-        } catch (err) {
-            outputField.value = "Служба перегружена. Попробуйте еще раз через мгновение.";
-        }
+            
+            document.body.removeChild(script);
+            delete window[callbackName];
+        };
+
+        // Создаем динамический тег скрипта. Данный шлюз стабильно отдает валидный JSONP
+        const script = document.createElement('script');
+        script.src = `https://googleapis.com{fromLang}&tl=${toLang}&dt=t&q=${encodeURIComponent(text)}&callback=${callbackName}`;
+        
+        script.onerror = function() {
+            outputField.value = "Ошибка сети. Попробуйте еще раз через секунду.";
+            try { document.body.removeChild(script); } catch(e){}
+            delete window[callbackName];
+        };
+        
+        document.body.appendChild(script);
     });
 </script>
 
