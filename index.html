@@ -2,95 +2,159 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Автономный ИИ Переводчик</title>
+    <title>Custom AI Translator</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
-            margin: 0; padding: 10px; background: transparent; 
+            margin: 0; 
+            padding: 10px; 
+            background: transparent; 
         }
-        .translator-container { max-width: 100%; display: flex; flex-direction: column; gap: 12px; }
-        .controls { display: flex; gap: 10px; align-items: center; justify-content: center; }
-        .translator-box { display: flex; gap: 15px; width: 100%; }
+        .translator-container { 
+            max-width: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+        }
+        .controls { 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .translator-box { 
+            display: flex; 
+            gap: 15px; 
+            width: 100%; 
+        }
         textarea { 
-            width: 50%; height: 180px; padding: 15px; border: 1px solid #dadce0; 
-            border-radius: 10px; font-size: 16px; outline: none; resize: none;
-            box-sizing: border-box; font-family: inherit;
+            width: 50%; 
+            height: 180px; 
+            padding: 15px; 
+            border: 1px solid #dadce0; 
+            border-radius: 10px; 
+            font-size: 16px; 
+            outline: none; 
+            resize: none;
+            box-sizing: border-box; 
+            font-family: inherit;
         }
-        textarea:focus { border-color: #1a73e8; box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
-        textarea[readonly] { background-color: #f8f9fa; color: #3c4043; }
+        textarea:focus { 
+            border-color: #1a73e8; 
+            box-shadow: 0 0 0 2px rgba(26,115,232,0.2);
+        }
+        textarea[readonly] { 
+            background-color: #f8f9fa; 
+            color: #3c4043; 
+        }
+        select { 
+            padding: 10px 16px; 
+            border: 1px solid #dadce0; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            background: white; 
+            cursor: pointer; 
+            outline: none; 
+        }
         button { 
-            padding: 10px 24px; background: #1a73e8; color: white; border: none; border-radius: 8px; 
-            font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s; 
+            padding: 10px 24px; 
+            background: #1a73e8; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            font-weight: 500; 
+            cursor: pointer; 
+            transition: background 0.2s; 
         }
-        button:hover { background: #1557b0; }
-        .status { font-size: 12px; color: #70757a; text-align: center; margin-top: -5px; }
+        button:hover { 
+            background: #1557b0; 
+        }
+        @media (max-width: 600px) { 
+            .translator-box { flex-direction: column; } 
+            textarea { width: 100%; height: 130px; } 
+        }
     </style>
 </head>
 <body>
 
 <div class="translator-container">
     <div class="controls">
-        <span>Русский</span>
+        <select id="langFrom">
+            <option value="ru" selected>Русский</option>
+            <option value="en">Английский</option>
+        </select>
+        
         <button id="translateBtn">Перевести ⇄</button>
-        <span>Английский</span>
+        
+        <select id="langTo">
+            <option value="en" selected>Английский</option>
+            <option value="ru">Русский</option>
+        </select>
     </div>
 
     <div class="translator-box">
-        <textarea id="inputText" placeholder="Введите сложный текст..."></textarea>
-        <textarea id="outputText" placeholder="Здесь появится автоматический перевод" readonly></textarea>
+        <textarea id="inputText" placeholder="Введите текст для перевода..."></textarea>
+        <textarea id="outputText" placeholder="Здесь появится перевод" readonly></textarea>
     </div>
-    <div id="statusText" class="status">Статус: Готов к работе</div>
 </div>
 
-<!-- Подключаем современную ИИ-библиотеку прямо из независимого CDN -->
-<script type="module">
-    import { pipeline } from 'https://jsdelivr.net';
+<script>
+    document.getElementById('translateBtn').addEventListener('click', function() {
+        const text = document.getElementById('inputText').value.trim();
+        const fromLang = document.getElementById('langFrom').value;
+        const toLang = document.getElementById('langTo').value;
+        const outputField = document.getElementById('outputText');
 
-    let translator = null;
-    const btn = document.getElementById('translateBtn');
-    const status = document.getElementById('statusText');
-    const inputField = document.getElementById('inputText');
-    const outputField = document.getElementById('outputText');
-
-    btn.addEventListener('click', async () => {
-        const text = inputField.value.trim();
         if (!text) {
             outputField.value = "Пожалуйста, введите текст.";
             return;
         }
 
-        // Если нейросеть еще не загружена в браузер, загружаем её
-        if (!translator) {
-            status.textContent = "Загрузка ИИ-модели в ваш браузер (только при первом запуске, около 15-20 МБ)...";
-            btn.disabled = true;
-            try {
-                // Используем сверхлегкую и быструю модель Xenova/translate5-ru-en
-                translator = await pipeline('translation', 'Xenova/mararian-translate-ru-en');
-                status.textContent = "ИИ успешно загружен в браузер!";
-            } catch (err) {
-                status.textContent = "Ошибка загрузки локальной модели. Проверьте интернет.";
-                btn.disabled = false;
-                return;
-            }
-            btn.disabled = false;
-        }
+        outputField.value = "Перевод...";
 
-        outputField.value = "ИИ вычисляет перевод...";
+        // Генерируем уникальное имя для глобальной функции обратного вызова
+        const callbackName = 'wixTranslateCallback_' + Math.round(100000 * Math.random());
         
-        try {
-            // Локальный перевод силами процессора пользователя
-            const output = await translator(text, {
-                src_lang: 'rus_Cyrl',
-                tgt_lang: 'eng_Latn',
-            });
+        // Регистрируем временную функцию в глобальной области видимости окна iframe
+        window[callbackName] = function(data) {
+            try {
+                if (data && data[0]) {
+                    let translatedText = '';
+                    data[0].forEach(function(part) {
+                        if (part && part[0]) {
+                            translatedText += part[0];
+                        }
+                    });
+                    outputField.value = translatedText;
+                } else {
+                    outputField.value = "Ошибка: Не удалось распознать структуру ответа.";
+                }
+            } catch (e) {
+                outputField.value = "Ошибка обработки перевода.";
+            }
             
-            outputField.value = output[0].translation_text;
-            status.textContent = "Перевод завершен локально!";
-        } catch (error) {
-            outputField.value = "Ошибка локального перевода: " + error.message;
-        }
+            // Удаляем отработавший тег скрипта и функцию для предотвращения утечек памяти
+            document.body.removeChild(script);
+            delete window[callbackName];
+        };
+
+        // Создаем динамический тег скрипта. Метод JSONP гарантированно обходит CORS в Origin: null
+        const script = document.createElement('script');
+        script.src = `https://googleapis.com{fromLang}&tl=${toLang}&dt=t&q=${encodeURIComponent(text)}&callback=${callbackName}`;
+        
+        script.onerror = function() {
+            outputField.value = "Ошибка соединения с сервером. Повторите попытку.";
+            try { document.body.removeChild(script); } catch(e){}
+        };
+        
+        document.body.appendChild(script);
     });
 </script>
+
+</body>
+</html>
+
 
 </body>
 </html>
