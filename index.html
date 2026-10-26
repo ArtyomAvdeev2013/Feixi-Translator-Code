@@ -2,89 +2,139 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Custom Translator Widget</title>
+    <title>Мой Брендированный Переводчик</title>
+    <!-- Подключаем официальную библиотеку ИИ-сервисов Puter, которая разрешена в фреймах -->
+    <script src="https://puter.com"></script>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
             margin: 0; 
             padding: 10px; 
             background: transparent; 
-            text-align: center;
         }
         .translator-container { 
             max-width: 100%; 
             display: flex; 
             flex-direction: column; 
-            align-items: center;
-            gap: 15px;
+            gap: 12px; 
         }
-        /* Центрируем панель управления */
-        #google_translate_element {
-            margin: 10px 0;
-            padding: 5px;
-            background: #ffffff;
-            border: 1px solid #dadce0;
-            border-radius: 8px;
-            display: inline-block;
+        .controls { 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; 
+            justify-content: center; 
         }
-        /* Стилизуем профессиональное поле для ввода текста */
-        textarea { 
+        .translator-box { 
+            display: flex; 
+            gap: 15px; 
             width: 100%; 
+        }
+        textarea { 
+            width: 50%; 
             height: 180px; 
             padding: 15px; 
             border: 1px solid #dadce0; 
-            border-radius: 12px; 
+            border-radius: 10px; 
             font-size: 16px; 
             outline: none; 
-            box-sizing: border-box;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
             resize: none;
+            box-sizing: border-box; 
             font-family: inherit;
         }
         textarea:focus { 
             border-color: #1a73e8; 
+            box-shadow: 0 0 0 2px rgba(26,115,232,0.2);
         }
-        .info-text {
-            font-size: 12px;
-            color: #70757a;
-            margin-top: 5px;
+        textarea[readonly] { 
+            background-color: #f8f9fa; 
+            color: #3c4043; 
         }
-        /* Аккуратно скрываем лишние элементы гугловского тулбара */
-        .goog-te-banner-frame.skiptranslate, .goog-te-gadget-icon {
-            display: none !important;
+        select { 
+            padding: 10px 16px; 
+            border: 1px solid #dadce0; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            background: white; 
+            cursor: pointer; 
+            outline: none; 
         }
-        body {
-            top: 0px !important;
+        button { 
+            padding: 10px 24px; 
+            background: #1a73e8; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            font-weight: 500; 
+            cursor: pointer; 
+            transition: background 0.2s; 
+        }
+        button:hover { 
+            background: #1557b0; 
+        }
+        @media (max-width: 600px) { 
+            .translator-box { flex-direction: column; } 
+            textarea { width: 100%; height: 130px; } 
         }
     </style>
 </head>
 <body>
 
 <div class="translator-container">
-    <!-- Сюда автоматически встроится аккуратный выбор языков от Google -->
-    <div id="google_translate_element"></div>
+    <div class="controls">
+        <select id="langFrom">
+            <option value="Russian" selected>Русский</option>
+            <option value="English">Английский</option>
+            <option value="German">Немецкий</option>
+            <option value="Spanish">Испанский</option>
+        </select>
+        
+        <button id="translateBtn">Перевести ⇄</button>
+        
+        <select id="langTo">
+            <option value="English" selected>Английский</option>
+            <option value="Russian">Русский</option>
+            <option value="German">Немецкий</option>
+            <option value="Spanish">Испанский</option>
+        </select>
+    </div>
 
-    <!-- Поле, в которое пользователь вводит фразу. Она переведется прямо внутри него на лету -->
-    <textarea id="inputText" placeholder="Введите любой сложный текст (фразы, абзацы). Выберите нужный язык в меню выше, и этот текст мгновенно и полностью переведется..."></textarea>
-    
-    <div class="info-text">Система машинного перевода интегрирована в интерфейс вашего бренда</div>
+    <div class="translator-box">
+        <textarea id="inputText" placeholder="Введите любой сложный текст для перевода..."></textarea>
+        <textarea id="outputText" placeholder="Здесь появится автоматический перевод" readonly></textarea>
+    </div>
 </div>
 
-<!-- Вызываем рабочий корпоративный модуль Google, адаптированный под фреймы -->
-<script type="text/javascript">
-function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-        pageLanguage: 'auto', 
-        // Вы можете добавить сюда любые нужные языки через запятую
-        includedLanguages: 'ru,en,de,es,fr,zh-CN', 
-        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-        multilanguagePage: true
-    }, 'google_translate_element');
-}
-</script>
+<script>
+    document.getElementById('translateBtn').addEventListener('click', async () => {
+        const text = document.getElementById('inputText').value.trim();
+        const fromLang = document.getElementById('langFrom').value;
+        const toLang = document.getElementById('langTo').value;
+        const outputField = document.getElementById('outputText');
 
-<script type="text/javascript" src="https://google.com"></script>
+        if (!text) {
+            outputField.value = "Пожалуйста, введите текст.";
+            return;
+        }
+
+        outputField.value = "ИИ вычисляет перевод...";
+
+        try {
+            // Прямой вызов встроенной бесплатной нейросети Putер ИИ, адаптированной под фреймы
+            const response = await puter.ai.chat(
+                `Translate the following text from ${fromLang} to ${toLang}. Return ONLY the direct translation without any extra comments, explanations or markdown quotes: "${text}"`
+            );
+
+            if (response && response.message && response.message.content) {
+                outputField.value = response.message.content.trim();
+            } else {
+                outputField.value = "Ошибка: ИИ вернул пустой ответ.";
+            }
+        } catch (err) {
+            outputField.value = "Служба перегружена. Попробуйте еще раз через мгновение.";
+        }
+    });
+</script>
 
 </body>
 </html>
-
