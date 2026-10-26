@@ -94,8 +94,8 @@
     </div>
 
     <div class="translator-box">
-        <textarea id="inputText" placeholder="Введите текст для перевода..."></textarea>
-        <textarea id="outputText" placeholder="Здесь появится перевод" readonly></textarea>
+        <textarea id="inputText" placeholder="Введите сложный текст (например: Здравствуйте! Как у вас жизнь?)..."></textarea>
+        <textarea id="outputText" placeholder="Здесь появится готовый перевод" readonly></textarea>
     </div>
 </div>
 
@@ -113,48 +113,46 @@
 
         outputField.value = "Перевод...";
 
-        // Генерируем уникальное имя для глобальной функции обратного вызова
-        const callbackName = 'wixTranslateCallback_' + Math.round(100000 * Math.random());
+        // 1. Создаем абсолютно уникальное глобальное имя для колбэка
+        const callbackName = 'mymemory_cb_' + Math.round(100000 * Math.random());
         
-        // Регистрируем временную функцию в глобальной области видимости окна iframe
-        window[callbackName] = function(data) {
+        // 2. Регистрируем функцию обработки ответа в глобальном окне
+        window[callbackName] = function(response) {
             try {
-                if (data && data[0]) {
-                    let translatedText = '';
-                    data[0].forEach(function(part) {
-                        if (part && part[0]) {
-                            translatedText += part[0];
-                        }
-                    });
-                    outputField.value = translatedText;
+                if (response && response.responseData && response.responseData.translatedText) {
+                    // Декодируем HTML-сущности, если API вернул их (например, &quot; вместо кавычек)
+                    const txt = document.createElement('textarea');
+                    txt.innerHTML = response.responseData.translatedText;
+                    outputField.value = txt.value;
                 } else {
-                    outputField.value = "Ошибка: Не удалось распознать структуру ответа.";
+                    outputField.value = "Ошибка: Сервер вернул пустой или некорректный ответ.";
                 }
             } catch (e) {
-                outputField.value = "Ошибка обработки перевода.";
+                outputField.value = "Ошибка обработки данных.";
             }
             
-            // Удаляем отработавший тег скрипта и функцию для предотвращения утечек памяти
-            document.body.removeChild(script);
+            // Чистим за собой DOM и память
+            if (script && script.parentNode) {
+                script.parentNode.removeChild(script);
+            }
             delete window[callbackName];
         };
 
-        // Создаем динамический тег скрипта. Метод JSONP гарантированно обходит CORS в Origin: null
+        // 3. Формируем динамический тег скрипта. 
+        // MyMemory API идеально принимает параметр &callback= и отдает валидный JSONP, который пробивает Sandbox в Wix.
         const script = document.createElement('script');
-        script.src = `https://googleapis.com{fromLang}&tl=${toLang}&dt=t&q=${encodeURIComponent(text)}&callback=${callbackName}`;
+        script.src = `https://translated.net{encodeURIComponent(text)}&langpair=${fromLang}|${toLang}&callback=${callbackName}`;
         
         script.onerror = function() {
-            outputField.value = "Ошибка соединения с сервером. Повторите попытку.";
+            outputField.value = "Ошибка соединения. Пожалуйста, попробуйте еще раз.";
             try { document.body.removeChild(script); } catch(e){}
+            delete window[callbackName];
         };
         
+        // Добавляем скрипт на страницу для выполнения запроса
         document.body.appendChild(script);
     });
 </script>
-
-</body>
-</html>
-
 
 </body>
 </html>
